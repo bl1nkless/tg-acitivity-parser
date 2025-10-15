@@ -1,0 +1,104 @@
+Metadata-Version: 2.4
+Name: spec1-tg-tracker
+Version: 0.1.0
+Summary: Telegram presence tracking platform (collector + API + dashboard)
+Author: SPEC-1 Team
+License: MIT
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi==0.115.0
+Requires-Dist: uvicorn[standard]==0.30.1
+Requires-Dist: sqlalchemy==2.0.31
+Requires-Dist: psycopg[binary]==3.1.19
+Requires-Dist: asyncpg==0.29.0
+Requires-Dist: pydantic==2.8.2
+Requires-Dist: pydantic-settings==2.4.0
+Requires-Dist: alembic==1.13.2
+Requires-Dist: python-jose[cryptography]==3.3.0
+Requires-Dist: passlib[bcrypt]==1.7.4
+Requires-Dist: redis==5.0.7
+Requires-Dist: telethon==1.41.0
+Requires-Dist: apscheduler==3.10.4
+Requires-Dist: orjson==3.10.7
+Requires-Dist: structlog==24.1.0
+Requires-Dist: tenacity==9.0.0
+Requires-Dist: httpx==0.27.0
+Requires-Dist: python-multipart==0.0.9
+Provides-Extra: dev
+Requires-Dist: pytest==8.2.2; extra == "dev"
+Requires-Dist: pytest-asyncio==0.23.7; extra == "dev"
+Requires-Dist: pytest-cov==5.0.0; extra == "dev"
+Requires-Dist: httpx==0.27.0; extra == "dev"
+Requires-Dist: ruff==0.5.5; extra == "dev"
+Requires-Dist: black==24.8.0; extra == "dev"
+Requires-Dist: isort==5.13.2; extra == "dev"
+Requires-Dist: mypy==1.10.0; extra == "dev"
+Requires-Dist: types-redis==4.6.0.20240425; extra == "dev"
+Requires-Dist: types-python-jose==3.3.4.8; extra == "dev"
+Requires-Dist: types-orjson==3.6.2; extra == "dev"
+
+# SPEC-1 Telegram Activity Tracker
+
+Full-stack implementation of the SPEC-1 requirement: collect Telegram online/offline presence in real time, aggregate sessions, and expose dashboards plus APIs.
+
+## Stack Overview
+
+- **Collector** — Python 3.12, Telethon userbot listening to MTProto updates, persisting events to PostgreSQL and Redis.
+- **API** — FastAPI with SQLAlchemy, JWT auth (admin/viewer), REST endpoints for tracked users, sessions, aggregates, consent.
+- **Jobs** — APScheduler background tasks for TTL-session closing, hourly rollups, lightweight polling corrections.
+- **Frontend** — Next.js 15 (App Router) with Tailwind CSS and ECharts for heatmaps, histograms, trend lines.
+- **Storage** — PostgreSQL 17 + optional TimescaleDB, Redis 7 for ephemeral state/caching.
+- **Ops** — Docker Compose for local development, backup scripts, metrics hooks.
+
+## Getting Started
+
+1. Copy `ops/docker/.env.example` → `ops/docker/.env` and provide values (Telegram API credentials, passwords, secrets).
+2. Build and start infrastructure services:
+
+   ```bash
+   docker compose -f ops/docker/docker-compose.yml up -d postgres redis
+   ```
+
+3. Apply migrations:
+
+   ```bash
+   docker compose -f ops/docker/docker-compose.yml run --rm api alembic upgrade head
+   ```
+
+4. Run one-time Telethon login to create the session file (you will be prompted for phone / code):
+
+   ```bash
+   docker compose -f ops/docker/docker-compose.yml run --rm collector python -m collector.login
+   ```
+
+5. Launch the full stack:
+
+   ```bash
+   docker compose -f ops/docker/docker-compose.yml up -d
+   ```
+
+6. Open:
+
+   - Web UI: http://localhost:3000
+   - API docs: http://localhost:8000/docs
+
+## Project Layout
+
+```
+collector/        # Telethon listener and jobs
+api/              # FastAPI application (REST + auth)
+web/              # Next.js dashboard
+common/           # Shared settings, database models, utilities
+migrations/       # Alembic migrations
+ops/docker/       # Dockerfiles, compose, environment templates
+ops/backup/       # Backup scripts
+tests/            # Pytest suites & API integration tests
+```
+
+## Development Tasks
+
+- `make format` — apply code formatting (ruff + black + isort + prettier).
+- `make test` — run Python and Cypress/component tests.
+- `make lint` — run static analysis.
+
+See individual README files in sub-directories for more details.
