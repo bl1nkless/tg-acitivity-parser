@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from common.config import load_api_settings
 from common.models import AccountUser
 
 from ..auth.dependencies import get_current_admin, get_current_user
@@ -10,6 +11,7 @@ from ..core.db import get_db
 from ..schemas.common import DeleteResponse, PaginatedResponse
 from ..schemas.tracked import TrackedUserCreate, TrackedUserOut, TrackedUserUpdate
 from ..services import tracked as tracked_service
+from ..services.telegram_resolver import normalize_username, resolve_username
 
 router = APIRouter(prefix="/tracked", tags=["tracked"])
 
@@ -37,14 +39,32 @@ async def create_tracked(
     session: AsyncSession = Depends(get_db),
     _: AccountUser = Depends(get_current_admin),
 ) -> TrackedUserOut:
-    existing = await tracked_service.get_tracked_user(session, payload.tg_user_id)
+    tg_user_id = payload.tg_user_id
+    normalized_username = normalize_username(payload.username) if payload.username else ""
+    username = normalized_username or None
+    display_name = payload.display_name
+
+    if tg_user_id is None:
+        try:
+            resolved = await resolve_username(load_api_settings(), username or "")
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+        except LookupError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        tg_user_id = resolved.tg_user_id
+        username = resolved.username
+        display_name = display_name or resolved.display_name
+
+    existing = await tracked_service.get_tracked_user(session, tg_user_id)
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already tracked")
     entity = await tracked_service.create_tracked_user(
         session,
-        tg_user_id=payload.tg_user_id,
-        username=payload.username,
-        display_name=payload.display_name,
+        tg_user_id=tg_user_id,
+        username=username,
+        display_name=display_name,
         phone_e164=payload.phone_e164,
         consent_basis=payload.consent_basis,
         notes=payload.notes,

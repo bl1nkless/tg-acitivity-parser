@@ -38,7 +38,7 @@ export interface TrackedUser {
 }
 
 export interface TrackedUserCreate {
-  tg_user_id: number;
+  tg_user_id?: number;
   username?: string;
   display_name?: string;
   consent_basis?: string;
@@ -82,6 +82,18 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   });
   if (!response.ok) {
     const text = await response.text();
+    let apiMessage: string | null = null;
+    try {
+      const parsed = JSON.parse(text) as { detail?: unknown };
+      if (typeof parsed.detail === "string") {
+        apiMessage = parsed.detail;
+      }
+    } catch {
+      // Fall back to the raw response body below when the API does not return JSON.
+    }
+    if (apiMessage) {
+      throw new Error(apiMessage);
+    }
     throw new Error(text || `Request failed: ${response.status}`);
   }
   return (await response.json()) as T;

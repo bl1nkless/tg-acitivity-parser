@@ -48,6 +48,9 @@ class ApiSettings(BaseAppSettings):
     allow_origins: List[str] = Field(default_factory=lambda: ["http://localhost:3000"], alias="ALLOW_ORIGINS")
     admin_email: Optional[str] = Field(default=None, alias="ADMIN_EMAIL")
     admin_password: Optional[str] = Field(default=None, alias="ADMIN_PASSWORD")
+    tg_api_id: Optional[int] = Field(default=None, alias="TG_API_ID")
+    tg_api_hash: Optional[str] = Field(default=None, alias="TG_API_HASH")
+    session_path: str = Field(default="session_store/collector.session", alias="SESSION_PATH")
 
     @field_validator("allow_origins", mode="before")
     @classmethod

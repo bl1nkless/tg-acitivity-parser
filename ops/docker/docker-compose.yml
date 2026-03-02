@@ -34,6 +34,11 @@ services:
       TZ: ${TZ}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TG_API_ID: ${TG_API_ID}
+      TG_API_HASH: ${TG_API_HASH}
+      SESSION_PATH: /sessions/collector.session
+    volumes:
+      - sessions:/sessions
     ports:
       - "8000:8000"
     depends_on:

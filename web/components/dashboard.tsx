@@ -336,9 +336,20 @@ export default function Dashboard() {
   const handleCreateTracked = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) return;
-    const tgUserId = Number(createForm.tg_user_id);
-    if (!Number.isInteger(tgUserId) || tgUserId <= 0) {
+    const trimmedTelegramId = createForm.tg_user_id.trim();
+    const trimmedUsername = createForm.username.trim().replace(/^@+/, "");
+    const parsedTelegramId = trimmedTelegramId ? Number(trimmedTelegramId) : undefined;
+    if (
+      parsedTelegramId !== undefined &&
+      (!Number.isInteger(parsedTelegramId) || parsedTelegramId <= 0)
+    ) {
       setCreateError("Telegram ID must be a positive number.");
+      setCreateSuccess(null);
+      return;
+    }
+    const tgUserId = parsedTelegramId;
+    if (!tgUserId && !trimmedUsername) {
+      setCreateError("Enter a Telegram ID or username.");
       setCreateSuccess(null);
       return;
     }
@@ -348,7 +359,7 @@ export default function Dashboard() {
     try {
       const created = await createTrackedUser(token, {
         tg_user_id: tgUserId,
-        username: createForm.username.trim() || undefined,
+        username: trimmedUsername || undefined,
         display_name: createForm.display_name.trim() || undefined,
         consent_basis: createForm.consent_basis.trim() || "oral",
         tz: createForm.tz.trim() || "Europe/Kyiv"
@@ -358,7 +369,7 @@ export default function Dashboard() {
         const withoutDuplicate = prev.filter((item) => item.tg_user_id !== created.tg_user_id);
         return [created, ...withoutDuplicate];
       });
-      setSearch(String(created.tg_user_id));
+      setSearch(created.username ? `@${created.username}` : String(created.tg_user_id));
       setCreateForm({
         tg_user_id: "",
         username: "",
@@ -449,9 +460,8 @@ export default function Dashboard() {
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, tg_user_id: event.target.value }))
                 }
-                placeholder="Telegram ID"
+                placeholder="Telegram ID (optional)"
                 className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-                required
               />
               <input
                 type="text"
@@ -459,7 +469,7 @@ export default function Dashboard() {
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, username: event.target.value }))
                 }
-                placeholder="Username"
+                placeholder="Username or @username"
                 className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
               />
               <input
