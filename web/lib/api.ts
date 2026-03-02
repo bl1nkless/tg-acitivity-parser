@@ -28,7 +28,7 @@ export interface TrackedUser {
   username?: string | null;
   display_name?: string | null;
   phone_e164?: string | null;
-  consent_basis: string;
+
   consent_at: string;
   tz: string;
   track_enabled: boolean;
@@ -41,7 +41,7 @@ export interface TrackedUserCreate {
   tg_user_id?: number;
   username?: string;
   display_name?: string;
-  consent_basis?: string;
+
   tz?: string;
 }
 

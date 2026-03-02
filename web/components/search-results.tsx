@@ -30,7 +30,7 @@ export default function SearchResults({ results, onSelect, selectedId }: SearchR
                     {user.username && <span className="text-xs text-slate-400"> @{user.username}</span>}
                   </p>
                   <p className="text-xs text-slate-400">
-                    Consent {user.consent_basis} · Enabled {user.track_enabled ? "yes" : "no"}
+                    Enabled {user.track_enabled ? "yes" : "no"}
                   </p>
                 </div>
                 <span className="text-xs text-slate-500">ID {user.tg_user_id}</span>

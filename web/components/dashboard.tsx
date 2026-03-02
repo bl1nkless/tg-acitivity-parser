@@ -200,7 +200,7 @@ export default function Dashboard() {
     tg_user_id: "",
     username: "",
     display_name: "",
-    consent_basis: "oral",
+
     tz: "Europe/Kyiv"
   });
   const [createLoading, setCreateLoading] = useState(false);
@@ -361,7 +361,7 @@ export default function Dashboard() {
         tg_user_id: tgUserId,
         username: trimmedUsername || undefined,
         display_name: createForm.display_name.trim() || undefined,
-        consent_basis: createForm.consent_basis.trim() || "oral",
+
         tz: createForm.tz.trim() || "Europe/Kyiv"
       });
       setSelectedUser(created);
@@ -374,7 +374,7 @@ export default function Dashboard() {
         tg_user_id: "",
         username: "",
         display_name: "",
-        consent_basis: "oral",
+
         tz: "Europe/Kyiv"
       });
       setCreateSuccess("Tracked user added.");
@@ -450,7 +450,7 @@ export default function Dashboard() {
           </div>
           {user?.role === "admin" && (
             <form
-              className="mt-8 grid gap-5 rounded-lg border border-slate-700/70 bg-slate-950/35 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1.15fr)_172px]"
+              className="mt-8 grid gap-5 rounded-lg border border-slate-700/70 bg-slate-950/35 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_172px]"
               onSubmit={handleCreateTracked}
             >
               <input
@@ -481,15 +481,7 @@ export default function Dashboard() {
                 placeholder="Display name"
                 className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
               />
-              <input
-                type="text"
-                value={createForm.consent_basis}
-                onChange={(event) =>
-                  setCreateForm((prev) => ({ ...prev, consent_basis: event.target.value }))
-                }
-                placeholder="Consent basis"
-                className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-              />
+
               <button
                 type="submit"
                 disabled={createLoading}
@@ -502,7 +494,7 @@ export default function Dashboard() {
               </button>
               {(createError || createSuccess) && (
                 <p
-                  className={`md:col-span-5 text-sm ${
+                  className={`md:col-span-4 text-sm ${
                     createError ? "text-rose-300" : "text-emerald-300"
                   }`}
                 >

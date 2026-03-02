@@ -18,9 +18,7 @@ export default function UserSummary({ user }: UserSummaryProps) {
           <p className="mt-1 text-sm text-slate-400">ID {user.tg_user_id}</p>
         </div>
         <div className="flex flex-wrap gap-3 text-xs text-slate-300">
-          <span className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 font-medium uppercase tracking-wide text-emerald-300">
-            {user.consent_basis}
-          </span>
+
           <span className="rounded-md border border-sky-400/30 bg-sky-500/10 px-3 py-1.5">
             TZ {user.tz}
           </span>

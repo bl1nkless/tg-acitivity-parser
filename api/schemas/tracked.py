@@ -11,7 +11,7 @@ class TrackedUserCreate(BaseModel):
     username: Optional[str] = None
     display_name: Optional[str] = None
     phone_e164: Optional[str] = None
-    consent_basis: str = Field(default="oral")
+
     notes: Optional[str] = None
     consent_reference: Optional[str] = None
     tz: str = Field(default="Europe/Kyiv")
@@ -27,7 +27,7 @@ class TrackedUserUpdate(BaseModel):
     username: Optional[str] = None
     display_name: Optional[str] = None
     phone_e164: Optional[str] = None
-    consent_basis: Optional[str] = None
+
     notes: Optional[str] = None
     consent_reference: Optional[str] = None
     tz: Optional[str] = None
@@ -39,7 +39,7 @@ class TrackedUserOut(BaseModel):
     username: Optional[str]
     display_name: Optional[str]
     phone_e164: Optional[str]
-    consent_basis: str
+
     consent_at: datetime
     tz: str
     track_enabled: bool

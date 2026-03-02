@@ -66,7 +66,7 @@ async def create_tracked(
         username=username,
         display_name=display_name,
         phone_e164=payload.phone_e164,
-        consent_basis=payload.consent_basis,
+        consent_basis="oral",
         notes=payload.notes,
         consent_reference=payload.consent_reference,
         tz=payload.tz,
