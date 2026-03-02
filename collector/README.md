@@ -18,6 +18,7 @@ Telethon-based worker that listens for `UpdateUserStatus` MTProto updates, persi
 | `DATABASE_URL` | Async SQLAlchemy URL, e.g. `postgresql+asyncpg://postgres:pass@postgres:5432/postgres`. |
 | `REDIS_URL` | Redis connection string for presence TTL tracking. |
 | `TTL_GRACE_SECONDS` | Extra seconds added to Telethon `expires` before auto-closing sessions. |
+| `POLL_INTERVAL_SECONDS` | Fallback interval for polling tracked users when Telegram status updates are missed. Defaults to 30 seconds. |
 
 ### Run Locally
 

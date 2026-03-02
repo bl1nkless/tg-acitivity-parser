@@ -84,7 +84,7 @@ class CollectorSettings(BaseAppSettings):
     session_path: str = Field(default="session_store/collector.session", alias="SESSION_PATH")
     polling_backoff_seconds: int = Field(default=120, alias="POLL_BACKOFF_SECONDS")
     ttl_grace_seconds: int = Field(default=30, alias="TTL_GRACE_SECONDS")
-    light_poll_interval_seconds: int = Field(default=300, alias="POLL_INTERVAL_SECONDS")
+    light_poll_interval_seconds: int = Field(default=30, alias="POLL_INTERVAL_SECONDS")
     burst_poll_window_seconds: int = Field(default=120, alias="BURST_WINDOW_SECONDS")
 
 

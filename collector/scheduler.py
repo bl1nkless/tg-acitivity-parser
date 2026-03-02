@@ -16,6 +16,12 @@ class CollectorScheduler:
     def start(self) -> None:
         self.scheduler.add_job(self._close_stale_wrapper, "interval", seconds=60, id="close_stale_sessions")
         self.scheduler.add_job(
+            self._poll_statuses_wrapper,
+            "interval",
+            seconds=self.tracker.settings.light_poll_interval_seconds,
+            id="poll_tracked_statuses",
+        )
+        self.scheduler.add_job(
             self._sync_tracked_wrapper,
             "interval",
             minutes=5,
@@ -32,6 +38,11 @@ class CollectorScheduler:
         synced = await self.tracker.sync_tracked_users(self.client)
         if synced:
             self.logger.info("tracked_users_synced", count=synced)
+
+    async def _poll_statuses_wrapper(self) -> None:
+        changed = await self.tracker.poll_tracked_statuses(self.client)
+        if changed:
+            self.logger.info("tracked_statuses_polled", changed=changed)
 
     def shutdown(self) -> None:
         self.scheduler.shutdown(wait=False)

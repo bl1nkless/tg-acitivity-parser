@@ -58,6 +58,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       SESSION_PATH: /sessions/collector.session
       TZ: ${TZ}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-30}
     volumes:
       - sessions:/sessions
     depends_on:

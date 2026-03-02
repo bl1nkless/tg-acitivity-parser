@@ -52,6 +52,7 @@ async def main() -> None:
         return
 
     await tracker.sync_tracked_users(client)
+    await tracker.poll_tracked_statuses(client)
 
     logger.info("collector_started")
     try:

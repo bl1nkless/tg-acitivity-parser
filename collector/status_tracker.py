@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from itertools import islice
 from typing import Dict, Iterable, Optional, Union
 
@@ -20,7 +20,7 @@ from common.models import (
     TrackedUser,
 )
 
-from .storage import close_session, create_status_event, open_session
+from .storage import close_session, create_status_event, get_active_session, open_session
 
 
 def _chunked(iterable: Iterable[int], size: int) -> Iterable[list[int]]:
@@ -162,6 +162,129 @@ class StatusTracker:
                 closed += 1
             await session.commit()
             return closed
+
+    async def poll_tracked_statuses(self, client, batch_size: int = 50) -> int:
+        """Poll current Telegram statuses when raw MTProto updates are missed."""
+        async with self.session_factory() as session:
+            result = await session.execute(
+                select(TrackedUser.tg_user_id).where(TrackedUser.track_enabled.is_(True))
+            )
+            user_ids = [row[0] for row in result.all()]
+
+        changed = 0
+        for chunk in _chunked(user_ids, batch_size):
+            for user_id in chunk:
+                try:
+                    entity = await client.get_entity(user_id)
+                    status = getattr(entity, "status", None)
+                    changed += await self._apply_polled_status(user_id, status)
+                except Exception as exc:  # pragma: no cover - defensive
+                    self.logger.warning("status_poll_failed", user_id=user_id, error=str(exc))
+        return changed
+
+    async def _apply_polled_status(self, user_id: int, status) -> int:
+        if isinstance(status, tl_types.UserStatusOnline):
+            expires_at = _to_datetime(status.expires)
+            async with self.session_factory() as session:
+                active = await get_active_session(session, user_id)
+                if active:
+                    ttl_seconds = self._compute_ttl_seconds(expires_at)
+                    await self.redis.setex(self._active_key(user_id), ttl_seconds, "1")
+                    return 0
+
+                await open_session(session, tg_user_id=user_id, precision=StatusPrecision.EXACT)
+                await create_status_event(
+                    session,
+                    tg_user_id=user_id,
+                    status=StatusEventType.ONLINE,
+                    precision=StatusPrecision.EXACT,
+                    source=StatusEventSource.POLL,
+                    expires_at=expires_at,
+                    raw={"expires": _iso_or_none(expires_at)},
+                )
+                await session.commit()
+                ttl_seconds = self._compute_ttl_seconds(expires_at)
+                await self.redis.setex(self._active_key(user_id), ttl_seconds, "1")
+                self.logger.info("online_polled", user_id=user_id, ttl=ttl_seconds)
+                return 1
+
+        if isinstance(status, tl_types.UserStatusOffline):
+            ts_to = _to_datetime(status.was_online)
+            async with self.session_factory() as session:
+                active = await get_active_session(session, user_id)
+                if not active:
+                    await self.redis.delete(self._active_key(user_id))
+                    if await self._record_missed_polled_session(session, user_id, ts_to):
+                        await session.commit()
+                        self.logger.info("missed_session_polled", user_id=user_id)
+                        return 1
+                    return 0
+
+                await close_session(
+                    session,
+                    tg_user_id=user_id,
+                    precision=active.source_precision,
+                    reason=SessionClosedReason.POLL,
+                    ts_to=ts_to,
+                )
+                await create_status_event(
+                    session,
+                    tg_user_id=user_id,
+                    status=StatusEventType.OFFLINE,
+                    precision=active.source_precision,
+                    source=StatusEventSource.POLL,
+                    raw={"was_online": _iso_or_none(ts_to)},
+                )
+                await session.commit()
+                await self.redis.delete(self._active_key(user_id))
+                self.logger.info("offline_polled", user_id=user_id)
+                return 1
+
+        return 0
+
+    async def _record_missed_polled_session(self, session, user_id: int, ts_to: Optional[datetime]) -> bool:
+        if ts_to is None:
+            return False
+
+        result = await session.execute(
+            select(OnlineSession)
+            .where(OnlineSession.tg_user_id == user_id)
+            .order_by(OnlineSession.ts_from.desc())
+            .limit(1)
+        )
+        latest = result.scalar_one_or_none()
+        latest_seen = None
+        if latest:
+            latest_seen = latest.ts_to or latest.ts_from
+            if latest_seen and latest_seen.tzinfo is None:
+                latest_seen = latest_seen.replace(tzinfo=timezone.utc)
+
+        if latest_seen and ts_to <= latest_seen:
+            return False
+
+        ts_from = ts_to - timedelta(seconds=1)
+        now = _utcnow()
+        session.add(
+            OnlineSession(
+                tg_user_id=user_id,
+                ts_from=ts_from,
+                ts_to=ts_to,
+                source_precision=StatusPrecision.APPROX,
+                closed_reason=SessionClosedReason.POLL,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        await create_status_event(
+            session,
+            tg_user_id=user_id,
+            status=StatusEventType.OFFLINE,
+            precision=StatusPrecision.APPROX,
+            source=StatusEventSource.POLL,
+            raw={"was_online": _iso_or_none(ts_to), "reason": "missed_online_window"},
+        )
+        await session.flush()
+        return True
 
     def _active_key(self, user_id: int) -> str:
         return f"active:{user_id}"
