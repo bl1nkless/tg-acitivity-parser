@@ -144,6 +144,17 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function UsersGlyph({ className = "h-8 w-8" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} fill="none" aria-hidden="true">
+      <path d="M12.5 15.5a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M3.8 26c.85-4.55 4.2-7.25 8.7-7.25 4.48 0 7.85 2.7 8.7 7.25" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M22.7 14.5a4 4 0 1 0-1.35-7.77" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M21.8 18.7c3.35.4 5.72 2.7 6.4 6.3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 interface DashboardState {
   heatmap: Heatmap | null;
   hourly: Array<{ bucket_start: string; online_seconds: number }>;
@@ -401,14 +412,21 @@ export default function Dashboard() {
           )}
         </header>
 
-        <section className="rounded-lg border border-slate-800 bg-slate-900 p-6">
-          <h2 className="text-lg font-medium text-slate-100">Tracked users</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Search by username, display name, or Telegram ID. Only users with explicit consent are visible.
-          </p>
+        <section className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.3)] backdrop-blur md:p-9">
+          <div className="flex items-start gap-5">
+            <UsersGlyph className="mt-1 h-9 w-9 text-blue-500" />
+            <div>
+              <h2 className="text-[26px] font-semibold tracking-normal text-white">Tracked users</h2>
+              <p className="mt-3 max-w-[610px] text-[17px] leading-[1.35] text-slate-300/80">
+                Search by username, display name, or Telegram ID.
+                <br />
+                Only users with explicit consent are visible.
+              </p>
+            </div>
+          </div>
           {user?.role === "admin" && (
             <form
-              className="mt-5 grid gap-3 rounded-md border border-slate-800 bg-slate-950 p-4 md:grid-cols-5"
+              className="mt-8 grid gap-5 rounded-lg border border-slate-700/70 bg-slate-950/35 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1.15fr)_172px]"
               onSubmit={handleCreateTracked}
             >
               <input
@@ -419,7 +437,7 @@ export default function Dashboard() {
                   setCreateForm((prev) => ({ ...prev, tg_user_id: event.target.value }))
                 }
                 placeholder="Telegram ID"
-                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                 required
               />
               <input
@@ -429,7 +447,7 @@ export default function Dashboard() {
                   setCreateForm((prev) => ({ ...prev, username: event.target.value }))
                 }
                 placeholder="Username"
-                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
               />
               <input
                 type="text"
@@ -438,7 +456,7 @@ export default function Dashboard() {
                   setCreateForm((prev) => ({ ...prev, display_name: event.target.value }))
                 }
                 placeholder="Display name"
-                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
               />
               <input
                 type="text"
@@ -447,13 +465,16 @@ export default function Dashboard() {
                   setCreateForm((prev) => ({ ...prev, consent_basis: event.target.value }))
                 }
                 placeholder="Consent basis"
-                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="h-[54px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
               />
               <button
                 type="submit"
                 disabled={createLoading}
-                className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+                className="flex h-[54px] items-center justify-center gap-3 rounded-md bg-blue-600 px-5 text-[16px] font-semibold text-white shadow-[0_0_28px_rgba(37,99,235,0.35)] transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none"
               >
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+                </svg>
                 {createLoading ? "Adding..." : "Add user"}
               </button>
               {(createError || createSuccess) && (
@@ -467,19 +488,22 @@ export default function Dashboard() {
               )}
             </form>
           )}
-          <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start">
-            <div className="w-full md:w-1/2">
-              <div className="flex items-center gap-2">
+          <div className="mt-7 flex flex-col gap-6">
+            <div>
+              <div className="relative flex items-center">
+                <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-5 h-7 w-7 text-slate-400" fill="none" aria-hidden="true">
+                  <path d="m21 21-4.4-4.4M10.8 18.1a7.3 7.3 0 1 1 0-14.6 7.3 7.3 0 0 1 0 14.6Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
                 <input
                   type="text"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search tracked users..."
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="h-[64px] w-full rounded-lg border border-slate-700/70 bg-slate-950/35 pl-16 pr-5 text-[18px] text-slate-100 placeholder:text-slate-400 shadow-inner shadow-slate-950/25 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/45"
                 />
-                {searchLoading && <span className="text-xs text-slate-400">Searching...</span>}
+                {searchLoading && <span className="absolute right-5 text-sm text-slate-400">Searching...</span>}
               </div>
-              <div className="mt-3 max-h-72 overflow-y-auto">
+              <div className="mt-6 max-h-72 overflow-y-auto">
                 <SearchResults
                   results={results}
                   selectedId={selectedUser?.tg_user_id}
@@ -487,12 +511,22 @@ export default function Dashboard() {
                 />
               </div>
             </div>
-            <div className="w-full md:w-1/2">
+            <div>
               {selectedUser ? (
                 <UserSummary user={selectedUser} />
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-700 p-6 text-sm text-slate-400">
-                  Select a tracked user to inspect heatmaps, aggregated activity, and session export options.
+                <div className="flex min-h-[270px] flex-col items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900/35 px-6 py-12 text-center shadow-inner shadow-slate-950/20">
+                  <div className="mb-6 flex h-[84px] w-[84px] items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/50 text-slate-400 shadow-[0_0_34px_rgba(37,99,235,0.12)]">
+                    <UsersGlyph className="h-10 w-10" />
+                  </div>
+                  <p className="text-[18px] font-medium text-slate-300">
+                    Start typing a username or ID to find tracked users.
+                  </p>
+                  <p className="mt-6 max-w-[480px] text-[16px] leading-[1.45] text-slate-400">
+                    Select a tracked user to inspect heatmaps, aggregated activity,
+                    <br className="hidden sm:block" />
+                    and session export options.
+                  </p>
                 </div>
               )}
             </div>
