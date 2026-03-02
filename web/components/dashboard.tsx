@@ -356,23 +356,45 @@ export default function Dashboard() {
   return (
     <LoginGate>
       <DashboardShell>
-      <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900 p-6 text-slate-200 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-100">Telegram activity dashboard</h1>
-            <p className="text-sm text-slate-400">
+      <div className="flex flex-col gap-8">
+        <header className="flex flex-col gap-6 pt-4 text-slate-200 md:flex-row md:items-start md:justify-between lg:pt-8">
+          <div className="max-w-[560px]">
+            <h1 className="text-[34px] font-semibold leading-tight tracking-normal text-white md:text-[38px]">
+              Telegram activity dashboard
+            </h1>
+            <p className="mt-4 max-w-[520px] text-[18px] leading-[1.35] text-slate-300/85">
               Inspect online/offline sessions, consent metadata, aggregated heatmaps, and export evidence.
             </p>
           </div>
           {user && (
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <span className="rounded border border-slate-700 bg-slate-800 px-2 py-1">
-                {user.email} · {user.role}
-              </span>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex h-[78px] items-center gap-4 rounded-lg border border-slate-700/70 bg-slate-900/70 px-5 pr-7 shadow-[0_18px_55px_rgba(2,8,23,0.22)] backdrop-blur">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-700 shadow-[0_0_28px_rgba(37,99,235,0.45)]">
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
+                    <path
+                      d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5.2 20a6.8 6.8 0 0 1 13.6 0"
+                      fill="white"
+                    />
+                  </svg>
+                </span>
+                <span className="min-w-0">
+                  <span className="block max-w-[230px] truncate text-[17px] font-medium leading-6 text-white">
+                    {user.email}
+                  </span>
+                  <span className="block text-sm text-slate-400">{user.role}</span>
+                </span>
+                <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-400" fill="none" aria-hidden="true">
+                  <path d="m7 9 5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
               <button
-                className="rounded border border-transparent bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700"
+                className="flex h-[78px] items-center justify-center gap-3 rounded-lg border border-slate-700/70 bg-slate-900/70 px-7 text-[16px] font-semibold text-white shadow-[0_18px_55px_rgba(2,8,23,0.22)] transition hover:border-sky-400/50 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                 onClick={logout}
               >
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-300" fill="none" aria-hidden="true">
+                  <path d="M14 8V6.5A2.5 2.5 0 0 0 11.5 4h-5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20h5a2.5 2.5 0 0 0 2.5-2.5V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M10 12h9m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
                 Sign out
               </button>
             </div>
