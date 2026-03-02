@@ -22,6 +22,128 @@ import TrendLineChart from "./charts/TrendLineChart";
 import SessionsTable from "./sessions-table";
 import { useAuthStore } from "@/store/use-auth";
 
+function SidebarIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-11 w-11 items-center justify-center rounded-[14px] text-slate-300 transition group-hover:text-sky-300">
+      {children}
+    </div>
+  );
+}
+
+function TelegramMark() {
+  return (
+    <div className="mx-auto flex h-[68px] w-[68px] items-center justify-center rounded-full border border-sky-300/10 bg-slate-900/70 shadow-[0_0_32px_rgba(14,165,233,0.18)]">
+      <svg viewBox="0 0 40 40" className="h-9 w-9" aria-hidden="true">
+        <path
+          d="M32.7 8.3 27.9 31c-.36 1.61-1.3 2-2.63 1.24l-7.28-5.37-3.51 3.38c-.39.39-.72.72-1.47.72l.52-7.41L27.02 11.4c.59-.52-.13-.81-.91-.29L9.45 21.61 2.28 19.37c-1.56-.49-1.59-1.56.33-2.31L30.65 6.25c1.3-.49 2.44.29 2.05 2.05Z"
+          fill="url(#telegram-gradient)"
+        />
+        <defs>
+          <linearGradient id="telegram-gradient" x1="6" y1="30" x2="32" y2="7">
+            <stop stopColor="#38bdf8" />
+            <stop offset="1" stopColor="#0ea5e9" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
+  const navItems = [
+    {
+      label: "Tracked Users",
+      active: true,
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+          <path d="M8 7h8M8 12h8M8 17h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <rect x="5" y="3.5" width="14" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      )
+    },
+    {
+      label: "Analytics",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+          <path d="M6 18V13M12 18V6M18 18v-9" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+          <path d="M6 20h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      )
+    },
+    {
+      label: "Export",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+          <path d="M12 4v10m0 0 4-4m-4 4-4-4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 17.5V20h14v-2.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    }
+  ];
+  const utilityItems = [
+    {
+      label: "Settings",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M19 13.4v-2.8l-2.05-.43a5.7 5.7 0 0 0-.56-1.36l1.15-1.75-1.98-1.98-1.75 1.15c-.43-.23-.89-.42-1.36-.56L12 3.6H9.2l-.43 2.07c-.48.14-.93.33-1.36.56L5.66 5.08 3.68 7.06l1.15 1.75c-.23.43-.42.88-.56 1.36l-2.07.43v2.8l2.07.43c.14.48.33.93.56 1.36l-1.15 1.75 1.98 1.98 1.75-1.15c.43.23.88.42 1.36.56l.43 2.07H12l.43-2.07c.48-.14.93-.33 1.36-.56l1.75 1.15 1.98-1.98-1.15-1.75c.23-.43.42-.88.56-1.36L19 13.4Z" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    },
+    {
+      label: "Help",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M9.8 9.5A2.4 2.4 0 0 1 12.22 7c1.42 0 2.48.88 2.48 2.15 0 1.06-.6 1.6-1.54 2.2-.78.5-1.14.92-1.14 1.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M12 16.5h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        </svg>
+      )
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_42%_0%,rgba(37,99,235,0.2),transparent_36%),linear-gradient(135deg,#050b19_0%,#020817_45%,#010614_100%)] text-slate-100">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[140px] border-r border-slate-700/60 bg-slate-950/60 shadow-[24px_0_70px_rgba(2,8,23,0.45)] backdrop-blur-xl lg:flex lg:flex-col">
+        <div className="px-8 pt-8">
+          <TelegramMark />
+        </div>
+        <nav className="mt-7 flex flex-1 flex-col justify-between">
+          <div className="space-y-2">
+            {navItems.map((item) => (
+              <div
+                key={item.label}
+                className={`group flex flex-col items-center gap-1.5 px-2 py-4 text-center text-[15px] font-medium ${
+                  item.active
+                    ? "border-l-2 border-sky-400 bg-sky-500/10 text-sky-300 shadow-[inset_0_0_28px_rgba(14,165,233,0.18)]"
+                    : "text-slate-400 hover:text-sky-200"
+                }`}
+              >
+                <SidebarIcon>{item.icon}</SidebarIcon>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="pb-9">
+            {utilityItems.map((item) => (
+              <div
+                key={item.label}
+                className="group flex flex-col items-center gap-1.5 px-2 py-3 text-center text-[15px] font-medium text-slate-400 hover:text-sky-200"
+              >
+                <SidebarIcon>{item.icon}</SidebarIcon>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </nav>
+      </aside>
+      <div className="mx-auto min-h-screen w-full max-w-[1510px] px-5 py-8 sm:px-8 lg:pl-[180px] lg:pr-8 xl:pl-[180px] xl:pr-12">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface DashboardState {
   heatmap: Heatmap | null;
   hourly: Array<{ bucket_start: string; online_seconds: number }>;
@@ -233,6 +355,7 @@ export default function Dashboard() {
 
   return (
     <LoginGate>
+      <DashboardShell>
       <div className="flex flex-col gap-6">
         <header className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900 p-6 text-slate-200 md:flex-row md:items-center md:justify-between">
           <div>
@@ -421,6 +544,7 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      </DashboardShell>
     </LoginGate>
   );
 }
