@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   API_BASE_URL,
   createTrackedUser,
@@ -22,7 +22,7 @@ import TrendLineChart from "./charts/TrendLineChart";
 import SessionsTable from "./sessions-table";
 import { useAuthStore } from "@/store/use-auth";
 
-function SidebarIcon({ children }: { children: React.ReactNode }) {
+function SidebarIcon({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-11 w-11 items-center justify-center rounded-[14px] text-slate-300 transition group-hover:text-sky-300">
       {children}
@@ -49,7 +49,7 @@ function TelegramMark() {
   );
 }
 
-function DashboardShell({ children }: { children: React.ReactNode }) {
+function DashboardShell({ children }: { children: ReactNode }) {
   const navItems = [
     {
       label: "Tracked Users",
@@ -137,6 +137,19 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       </aside>
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-800/70 bg-slate-950/80 px-5 py-4 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-sky-300/10 bg-slate-900/80">
+            <svg viewBox="0 0 40 40" className="h-6 w-6" aria-hidden="true">
+              <path
+                d="M32.7 8.3 27.9 31c-.36 1.61-1.3 2-2.63 1.24l-7.28-5.37-3.51 3.38c-.39.39-.72.72-1.47.72l.52-7.41L27.02 11.4c.59-.52-.13-.81-.91-.29L9.45 21.61 2.28 19.37c-1.56-.49-1.59-1.56.33-2.31L30.65 6.25c1.3-.49 2.44.29 2.05 2.05Z"
+                fill="#38bdf8"
+              />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold text-sky-300">Tracked Users</span>
+        </div>
+      </div>
       <div className="mx-auto min-h-screen w-full max-w-[1510px] px-5 py-8 sm:px-8 lg:pl-[180px] lg:pr-8 xl:pl-[180px] xl:pr-12">
         {children}
       </div>
