@@ -37,6 +37,14 @@ export interface TrackedUser {
   consent_reference?: string | null;
 }
 
+export interface TrackedUserCreate {
+  tg_user_id: number;
+  username?: string;
+  display_name?: string;
+  consent_basis?: string;
+  tz?: string;
+}
+
 export interface Session {
   id: number;
   tg_user_id: number;
@@ -112,6 +120,20 @@ export async function searchTrackedUsers(
     params.set("search", search);
   }
   return await request<Paginated<TrackedUser>>(`/tracked?${params.toString()}`, {}, token);
+}
+
+export async function createTrackedUser(
+  token: string,
+  payload: TrackedUserCreate
+): Promise<TrackedUser> {
+  return await request<TrackedUser>(
+    "/tracked/",
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    },
+    token
+  );
 }
 
 export async function getTrackedUser(token: string, userId: number): Promise<TrackedUser> {

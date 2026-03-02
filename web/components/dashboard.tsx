@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   API_BASE_URL,
+  createTrackedUser,
   getHeatmapData,
   getHourlyData,
   getRecentSessions,
@@ -47,8 +48,18 @@ export default function Dashboard() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [results, setResults] = useState<TrackedUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<TrackedUser | null>(null);
-const [state, setState] = useState<DashboardState>(initialState);
+  const [state, setState] = useState<DashboardState>(initialState);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    tg_user_id: "",
+    username: "",
+    display_name: "",
+    consent_basis: "oral",
+    tz: "Europe/Kyiv"
+  });
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const latestRequestRef = useRef<number>(0);
 
@@ -176,6 +187,47 @@ const [state, setState] = useState<DashboardState>(initialState);
     }
   };
 
+  const handleCreateTracked = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) return;
+    const tgUserId = Number(createForm.tg_user_id);
+    if (!Number.isInteger(tgUserId) || tgUserId <= 0) {
+      setCreateError("Telegram ID must be a positive number.");
+      setCreateSuccess(null);
+      return;
+    }
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(null);
+    try {
+      const created = await createTrackedUser(token, {
+        tg_user_id: tgUserId,
+        username: createForm.username.trim() || undefined,
+        display_name: createForm.display_name.trim() || undefined,
+        consent_basis: createForm.consent_basis.trim() || "oral",
+        tz: createForm.tz.trim() || "Europe/Kyiv"
+      });
+      setSelectedUser(created);
+      setResults((prev) => {
+        const withoutDuplicate = prev.filter((item) => item.tg_user_id !== created.tg_user_id);
+        return [created, ...withoutDuplicate];
+      });
+      setSearch(String(created.tg_user_id));
+      setCreateForm({
+        tg_user_id: "",
+        username: "",
+        display_name: "",
+        consent_basis: "oral",
+        tz: "Europe/Kyiv"
+      });
+      setCreateSuccess("Tracked user added.");
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Failed to add tracked user.");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const summaryHeatmap = useMemo(() => state.heatmap?.cells ?? [], [state.heatmap]);
   const summaryHourly = useMemo(() => state.hourly, [state.hourly]);
 
@@ -209,6 +261,67 @@ const [state, setState] = useState<DashboardState>(initialState);
           <p className="mt-1 text-sm text-slate-400">
             Search by username, display name, or Telegram ID. Only users with explicit consent are visible.
           </p>
+          {user?.role === "admin" && (
+            <form
+              className="mt-5 grid gap-3 rounded-md border border-slate-800 bg-slate-950 p-4 md:grid-cols-5"
+              onSubmit={handleCreateTracked}
+            >
+              <input
+                type="number"
+                min="1"
+                value={createForm.tg_user_id}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, tg_user_id: event.target.value }))
+                }
+                placeholder="Telegram ID"
+                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                required
+              />
+              <input
+                type="text"
+                value={createForm.username}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, username: event.target.value }))
+                }
+                placeholder="Username"
+                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+              />
+              <input
+                type="text"
+                value={createForm.display_name}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, display_name: event.target.value }))
+                }
+                placeholder="Display name"
+                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+              />
+              <input
+                type="text"
+                value={createForm.consent_basis}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({ ...prev, consent_basis: event.target.value }))
+                }
+                placeholder="Consent basis"
+                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+              />
+              <button
+                type="submit"
+                disabled={createLoading}
+                className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+              >
+                {createLoading ? "Adding..." : "Add user"}
+              </button>
+              {(createError || createSuccess) && (
+                <p
+                  className={`md:col-span-5 text-sm ${
+                    createError ? "text-rose-300" : "text-emerald-300"
+                  }`}
+                >
+                  {createError || createSuccess}
+                </p>
+              )}
+            </form>
+          )}
           <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start">
             <div className="w-full md:w-1/2">
               <div className="flex items-center gap-2">
