@@ -24,7 +24,8 @@ async def list_tracked_users(
     query = _base_query()
     count_query = select(func.count()).select_from(TrackedUser)
     if search:
-        pattern = f"%{search.lower()}%"
+        cleaned = search.lstrip("@").lower()
+        pattern = f"%{cleaned}%"
         condition = (
             func.lower(TrackedUser.username).like(pattern)
             | func.lower(TrackedUser.display_name).like(pattern)

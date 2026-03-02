@@ -129,7 +129,7 @@ export async function searchTrackedUsers(
   params.set("limit", String(limit));
   params.set("offset", "0");
   if (search) {
-    params.set("search", search);
+    params.set("search", search.replace(/^@+/, ""));
   }
   return await request<Paginated<TrackedUser>>(`/tracked?${params.toString()}`, {}, token);
 }
