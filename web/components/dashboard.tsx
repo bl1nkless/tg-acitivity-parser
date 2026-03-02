@@ -534,31 +534,31 @@ export default function Dashboard() {
         </section>
 
         {state.error && (
-          <div className="rounded border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-300">
+          <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-300">
             {state.error}
           </div>
         )}
 
         {selectedUser && !state.loadingData && (
           <section className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.22)]">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-100">Weekly heatmap</h3>
-                <span className="text-xs text-slate-500">minutes online</span>
+                <h3 className="text-lg font-semibold text-white">Weekly heatmap</h3>
+                <span className="text-xs text-slate-400">minutes online</span>
               </div>
               <HeatmapChart data={summaryHeatmap} />
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.22)]">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-100">Hourly distribution</h3>
-                <span className="text-xs text-slate-500">minutes online</span>
+                <h3 className="text-lg font-semibold text-white">Hourly distribution</h3>
+                <span className="text-xs text-slate-400">minutes online</span>
               </div>
               <HourlyDistributionChart data={summaryHourly} timezone={selectedUser.tz} />
             </div>
-            <div className="md:col-span-2 rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <div className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.22)] md:col-span-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-100">Daily trend</h3>
-                <span className="text-xs text-slate-500">minutes online per day</span>
+                <h3 className="text-lg font-semibold text-white">Daily trend</h3>
+                <span className="text-xs text-slate-400">minutes online per day</span>
               </div>
               <TrendLineChart data={summaryHourly} />
             </div>
@@ -566,18 +566,18 @@ export default function Dashboard() {
         )}
 
         {selectedUser && (
-          <section className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+          <section className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.22)]">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-100">Recent sessions</h3>
+              <h3 className="text-lg font-semibold text-white">Recent sessions</h3>
               <div className="flex gap-2 text-xs">
                 <button
-                  className="rounded border border-sky-500/50 bg-sky-500/10 px-3 py-1 text-sky-200 hover:bg-sky-500/20"
+                  className="rounded-md border border-sky-400/45 bg-sky-500/10 px-4 py-2 text-sky-100 transition hover:bg-sky-500/20"
                   onClick={() => handleExport("csv")}
                 >
                   Export CSV
                 </button>
                 <button
-                  className="rounded border border-slate-700 bg-slate-800 px-3 py-1 text-slate-200 hover:bg-slate-700"
+                  className="rounded-md border border-slate-700 bg-slate-800/70 px-4 py-2 text-slate-200 transition hover:bg-slate-700"
                   onClick={() => handleExport("json")}
                 >
                   Export JSON
@@ -595,7 +595,7 @@ export default function Dashboard() {
         )}
 
         {state.loadingData && (
-          <div className="rounded border border-slate-800 bg-slate-900 p-6 text-center text-sm text-slate-400">
+          <div className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 text-center text-sm text-slate-400">
             Loading activity data...
           </div>
         )}

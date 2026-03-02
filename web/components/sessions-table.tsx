@@ -33,9 +33,9 @@ function formatActiveDuration(start: Date, now: Date): string {
 
 export default function SessionsTable({ sessions, now }: SessionsTableProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-      <table className="min-w-full divide-y divide-slate-800 text-sm">
-        <thead className="bg-slate-950/60 text-xs uppercase text-slate-400">
+    <div className="overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/20">
+      <table className="min-w-full divide-y divide-slate-700/60 text-sm">
+        <thead className="bg-slate-950/45 text-xs uppercase text-slate-400">
           <tr>
             <th className="px-4 py-2 text-left">From</th>
             <th className="px-4 py-2 text-left">To</th>
@@ -44,13 +44,13 @@ export default function SessionsTable({ sessions, now }: SessionsTableProps) {
             <th className="px-4 py-2 text-left">Closed</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800 text-slate-200">
+        <tbody className="divide-y divide-slate-700/60 text-slate-200">
           {sessions.map((session) => {
             const tsFrom = new Date(session.ts_from);
             const tsTo = session.ts_to ? new Date(session.ts_to) : null;
             const durationLabel = tsTo ? formatDuration(tsFrom, tsTo) : formatActiveDuration(tsFrom, now);
             return (
-              <tr key={session.id} className="hover:bg-slate-800/60">
+              <tr key={session.id} className="hover:bg-slate-800/45">
                 <td className="px-4 py-2">{format(tsFrom, "yyyy-MM-dd HH:mm:ss")}</td>
                 <td className="px-4 py-2">{tsTo ? format(tsTo, "yyyy-MM-dd HH:mm:ss") : <span>—</span>}</td>
                 <td className="px-4 py-2">{durationLabel}</td>
@@ -61,7 +61,7 @@ export default function SessionsTable({ sessions, now }: SessionsTableProps) {
           })}
           {sessions.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                 No sessions yet for this range.
               </td>
             </tr>
