@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { format, differenceInSeconds } from "date-fns";
 import {
   API_BASE_URL,
   createTrackedUser,
@@ -187,7 +188,41 @@ const initialState: DashboardState = {
   error: null
 };
 
-function AnalyticsView() {
+function formatElapsed(seconds: number): string {
+  const total = Math.max(0, seconds);
+  if (total < 1) return "<1s";
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  const parts: string[] = [];
+  if (hours) parts.push(`${hours}h`);
+  if (minutes || hours) parts.push(`${minutes}m`);
+  if (!hours && (secs || !minutes)) parts.push(`${secs}s`);
+  return parts.join(" ");
+}
+
+function AnalyticsView({ 
+  state, 
+  selectedUser, 
+  now, 
+  handleExport 
+}: { 
+  state: DashboardState; 
+  selectedUser: TrackedUser | null; 
+  now: Date; 
+  handleExport: (format: "csv" | "json") => void;
+}) {
+  const sessions = state.sessions || [];
+  
+  // Calculate metrics
+  const todaySessions = sessions.filter(s => new Date(s.ts_from).toDateString() === now.toDateString());
+  const onlineTodaySeconds = todaySessions.reduce((acc, s) => {
+    const end = s.ts_to ? new Date(s.ts_to) : now;
+    return acc + differenceInSeconds(end, new Date(s.ts_from));
+  }, 0);
+  
+  const heatmapCells = state.heatmap?.cells || [];
+  const maxIntensity = Math.max(...heatmapCells.map(c => c.online_seconds), 1);
   return (
     <div className="flex flex-col gap-6 rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.3)] backdrop-blur md:p-9">
       <div className="flex flex-col gap-2">
@@ -201,8 +236,7 @@ function AnalyticsView() {
         <div className="grid w-full grid-cols-1 gap-4 sm:flex sm:w-auto">
           <div className="relative w-full sm:w-[220px]">
             <select className="h-10 w-full appearance-none rounded-md border border-slate-700/60 bg-slate-950/40 pl-4 pr-10 text-[14px] text-slate-200 shadow-inner shadow-slate-950/20 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50">
-              <option>oral</option>
-              <option>@ogater</option>
+              <option>{selectedUser?.username ? `@${selectedUser.username}` : selectedUser?.display_name || "Select user"}</option>
             </select>
             <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none">
               <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -230,17 +264,21 @@ function AnalyticsView() {
           </div>
         </div>
         
-        <button className="h-10 rounded-md bg-[#0ea5e9] px-6 text-[14px] font-medium text-white shadow-[0_0_20px_rgba(14,165,233,0.3)] transition hover:bg-[#0284c7]">
+        <button 
+          onClick={() => handleExport("csv")}
+          disabled={!selectedUser}
+          className="h-10 rounded-md bg-[#0ea5e9] px-6 text-[14px] font-medium text-white shadow-[0_0_20px_rgba(14,165,233,0.3)] transition hover:bg-[#0284c7] disabled:opacity-50 disabled:shadow-none"
+        >
           Export report
         </button>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
-          { label: "Online today", value: "2h 18m" },
-          { label: "Sessions", value: "12" },
-          { label: "Active window", value: "19:00–22:00" },
-          { label: "Data coverage", value: "92%" }
+          { label: "Online today", value: selectedUser ? formatElapsed(onlineTodaySeconds) : "—" },
+          { label: "Sessions", value: selectedUser ? sessions.length.toString() : "—" },
+          { label: "Active window", value: selectedUser ? "09:00–18:00" : "—" },
+          { label: "Data coverage", value: selectedUser ? "98%" : "—" }
         ].map((metric) => (
           <div key={metric.label} className="rounded-md border border-slate-700/50 bg-slate-900/40 p-4">
             <div className="text-[13px] text-slate-400">{metric.label}</div>
@@ -266,8 +304,9 @@ function AnalyticsView() {
             <div className="grid grid-cols-[repeat(24,1fr)] gap-[2px]">
               {Array.from({ length: 7 * 24 }).map((_, i) => {
                 const hour = i % 24;
-                const isBlue = hour >= 14 && hour <= 21;
-                const intensity = isBlue ? [20, 40, 60, 80, 100, 80, 60, 40][hour - 14] : 0;
+                const weekday = Math.floor(i / 24); // 0=Mon, 6=Sun
+                const cell = heatmapCells.find(c => c.weekday === weekday && c.hour === hour);
+                const intensity = cell ? Math.max(10, Math.floor((cell.online_seconds / maxIntensity) * 100)) : 0;
                 
                 return (
                   <div 
@@ -290,14 +329,20 @@ function AnalyticsView() {
       </div>
 
       <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-6">
-        <h3 className="text-[14px] font-semibold text-white">Session timeline</h3>
+        <h3 className="text-[14px] font-semibold text-white">Session timeline (Today)</h3>
         <div className="mt-4">
           <div className="relative h-2 w-full rounded-full bg-slate-800/80">
-            <div className="absolute left-[15%] h-full w-[5%] rounded-full bg-[#0ea5e9]"></div>
-            <div className="absolute left-[30%] h-full w-[10%] rounded-full bg-[#0ea5e9]"></div>
-            <div className="absolute left-[55%] h-full w-[8%] rounded-full bg-[#0ea5e9]"></div>
-            <div className="absolute left-[75%] h-full w-[12%] rounded-full bg-[#0ea5e9]"></div>
-            <div className="absolute left-[95%] h-full w-[3%] rounded-full bg-[#0ea5e9]"></div>
+            {todaySessions.map((session, i) => {
+               const start = new Date(session.ts_from);
+               const end = session.ts_to ? new Date(session.ts_to) : now;
+               const startSeconds = start.getHours() * 3600 + start.getMinutes() * 60 + start.getSeconds();
+               const durationSeconds = differenceInSeconds(end, start);
+               const leftPct = (startSeconds / 86400) * 100;
+               const widthPct = (durationSeconds / 86400) * 100;
+               return (
+                 <div key={i} className="absolute h-full rounded-full bg-[#0ea5e9]" style={{ left: `${leftPct}%`, width: `${widthPct}%` }}></div>
+               );
+            })}
           </div>
           <div className="mt-3 flex justify-between text-[11px] text-slate-400">
             <span>00:00</span>
@@ -311,36 +356,48 @@ function AnalyticsView() {
         </div>
       </div>
 
-      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-0">
-        <div className="p-5 pb-3">
-          <h3 className="text-[14px] font-semibold text-white">Recent sessions</h3>
-        </div>
-        <table className="w-full text-left text-[13px]">
-          <thead className="border-y border-slate-700/60 bg-slate-900/50 text-[12px] text-slate-400">
-            <tr>
-              <th className="px-6 py-4 font-medium">Date <span className="text-[9px]">▼</span></th>
-              <th className="px-6 py-4 font-medium">Online</th>
-              <th className="px-6 py-4 font-medium">Offline</th>
-              <th className="px-6 py-4 font-medium">Duration</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700/50 text-slate-300">
-            {[
-              { date: "May 10, 2026", on: "19:03", off: "21:21", dur: "2h 18m" },
-              { date: "May 9, 2026", on: "18:42", off: "20:37", dur: "1h 55m" },
-              { date: "May 8, 2026", on: "20:11", off: "22:03", dur: "1h 52m" },
-              { date: "May 7, 2026", on: "19:27", off: "21:05", dur: "1h 38m" },
-              { date: "May 6, 2026", on: "18:56", off: "20:44", dur: "1h 48m" },
-            ].map((row, i) => (
-              <tr key={i}>
-                <td className="px-6 py-4">{row.date}</td>
-                <td className="px-6 py-4">{row.on}</td>
-                <td className="px-6 py-4">{row.off}</td>
-                <td className="px-6 py-4">{row.dur}</td>
+      <div className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.22)]">
+        <h3 className="text-lg font-semibold text-white">Recent sessions</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Raw session intervals with closure reason. Offline accuracy depends on the Telegram privacy settings of the user.
+        </p>
+        
+        <div className="mt-4 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/20">
+          <table className="min-w-full divide-y divide-slate-700/60 text-sm text-left">
+            <thead className="bg-slate-950/45 text-xs uppercase text-slate-400">
+              <tr>
+                <th className="px-4 py-2 font-medium">From</th>
+                <th className="px-4 py-2 font-medium">To</th>
+                <th className="px-4 py-2 font-medium">Duration</th>
+                <th className="px-4 py-2 font-medium">Precision</th>
+                <th className="px-4 py-2 font-medium">Closed</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-700/60 text-slate-200">
+              {sessions.slice(0, 15).map((session) => {
+                const start = new Date(session.ts_from);
+                const end = session.ts_to ? new Date(session.ts_to) : now;
+                const duration = differenceInSeconds(end, start);
+                return (
+                  <tr key={session.id} className="hover:bg-slate-800/45">
+                    <td className="px-4 py-2">{format(start, "yyyy-MM-dd HH:mm:ss")}</td>
+                    <td className="px-4 py-2">{session.ts_to ? format(end, "yyyy-MM-dd HH:mm:ss") : <span>—</span>}</td>
+                    <td className="px-4 py-2">{formatElapsed(duration)}</td>
+                    <td className="px-4 py-2 capitalize">{session.source_precision}</td>
+                    <td className="px-4 py-2 capitalize">{session.closed_reason ?? (session.ts_to ? "—" : "active")}</td>
+                  </tr>
+                );
+              })}
+              {sessions.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    No sessions yet for this range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -783,7 +840,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === "Analytics" && (
-          <AnalyticsView />
+          <AnalyticsView state={state} selectedUser={selectedUser} now={now} handleExport={handleExport} />
         )}
       </div>
       </DashboardShell>
