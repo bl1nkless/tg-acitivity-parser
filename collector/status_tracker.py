@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from itertools import islice
 from typing import Dict, Iterable, Optional, Union
@@ -175,9 +176,11 @@ class StatusTracker:
         for chunk in _chunked(user_ids, batch_size):
             for user_id in chunk:
                 try:
-                    entity = await client.get_entity(user_id)
+                    entity = await asyncio.wait_for(client.get_entity(user_id), timeout=10)
                     status = getattr(entity, "status", None)
                     changed += await self._apply_polled_status(user_id, status)
+                except asyncio.TimeoutError:
+                    self.logger.warning("status_poll_timeout", user_id=user_id)
                 except Exception as exc:  # pragma: no cover - defensive
                     self.logger.warning("status_poll_failed", user_id=user_id, error=str(exc))
         return changed
@@ -308,8 +311,10 @@ class StatusTracker:
         for chunk in _chunked(user_ids, batch_size):
             for user_id in chunk:
                 try:
-                    await client.get_entity(user_id)
+                    await asyncio.wait_for(client.get_entity(user_id), timeout=10)
                     synced += 1
+                except asyncio.TimeoutError:
+                    self.logger.warning("prefetch_timeout", user_id=user_id)
                 except Exception as exc:  # pragma: no cover - defensive
                     self.logger.warning("prefetch_failed", user_id=user_id, error=str(exc))
         if synced:
