@@ -250,7 +250,7 @@ function AnalyticsView() {
         ))}
       </div>
 
-      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-5">
+      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-6">
         <h3 className="text-[14px] font-semibold text-white">Activity heatmap</h3>
         <div className="mt-4 flex">
           <div className="flex w-[40px] flex-col justify-between py-1 text-[11px] leading-none text-slate-400">
@@ -289,7 +289,7 @@ function AnalyticsView() {
         </div>
       </div>
 
-      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-5">
+      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-6">
         <h3 className="text-[14px] font-semibold text-white">Session timeline</h3>
         <div className="mt-4">
           <div className="relative h-2 w-full rounded-full bg-slate-800/80">
@@ -316,12 +316,12 @@ function AnalyticsView() {
           <h3 className="text-[14px] font-semibold text-white">Recent sessions</h3>
         </div>
         <table className="w-full text-left text-[13px]">
-          <thead className="border-y border-slate-700/50 bg-slate-900/50 text-slate-400">
+          <thead className="border-y border-slate-700/60 bg-slate-900/50 text-[12px] text-slate-400">
             <tr>
-              <th className="px-5 py-3 font-medium">Date <span className="text-[10px]">▼</span></th>
-              <th className="px-5 py-3 font-medium">Online</th>
-              <th className="px-5 py-3 font-medium">Offline</th>
-              <th className="px-5 py-3 font-medium">Duration</th>
+              <th className="px-6 py-4 font-medium">Date <span className="text-[9px]">▼</span></th>
+              <th className="px-6 py-4 font-medium">Online</th>
+              <th className="px-6 py-4 font-medium">Offline</th>
+              <th className="px-6 py-4 font-medium">Duration</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/50 text-slate-300">
