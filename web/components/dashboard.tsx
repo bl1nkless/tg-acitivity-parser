@@ -49,11 +49,11 @@ function TelegramMark() {
   );
 }
 
-function DashboardShell({ children }: { children: ReactNode }) {
+function DashboardShell({ children, activeTab, onTabChange }: { children: ReactNode, activeTab: string, onTabChange: (tab: string) => void }) {
   const navItems = [
     {
       label: "Tracked Users",
-      active: true,
+      active: activeTab === "Tracked Users",
       icon: (
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
           <path d="M8 7h8M8 12h8M8 17h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -63,6 +63,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
     },
     {
       label: "Analytics",
+      active: activeTab === "Analytics",
       icon: (
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
           <path d="M6 18V13M12 18V6M18 18v-9" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
@@ -72,6 +73,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
     },
     {
       label: "Export",
+      active: activeTab === "Export",
       icon: (
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
           <path d="M12 4v10m0 0 4-4m-4 4-4-4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
@@ -113,7 +115,8 @@ function DashboardShell({ children }: { children: ReactNode }) {
             {navItems.map((item) => (
               <div
                 key={item.label}
-                className={`group flex flex-col items-center gap-1.5 px-2 py-4 text-center text-[15px] font-medium ${
+                onClick={() => onTabChange(item.label)}
+                className={`group flex flex-col items-center gap-1.5 px-2 py-4 cursor-pointer text-center text-[15px] font-medium transition-colors ${
                   item.active
                     ? "border-l-2 border-sky-400 bg-sky-500/10 text-sky-300 shadow-[inset_0_0_28px_rgba(14,165,233,0.18)]"
                     : "text-slate-400 hover:text-sky-200"
@@ -147,7 +150,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
               />
             </svg>
           </div>
-          <span className="text-sm font-semibold text-sky-300">Tracked Users</span>
+          <span className="text-sm font-semibold text-sky-300">{activeTab}</span>
         </div>
       </div>
       <div className="mx-auto min-h-screen w-full max-w-[1510px] px-5 py-8 sm:px-8 lg:pl-[180px] lg:pr-8 xl:pl-[180px] xl:pr-12">
@@ -184,12 +187,172 @@ const initialState: DashboardState = {
   error: null
 };
 
+function AnalyticsView() {
+  return (
+    <div className="flex flex-col gap-6 rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.3)] backdrop-blur md:p-9">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[20px] font-semibold tracking-normal text-white">Analytics</h2>
+        <p className="text-[14px] leading-[1.35] text-slate-300/80">
+          Activity patterns based on consented online/offline session data.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid w-full grid-cols-1 gap-4 sm:flex sm:w-auto">
+          <div className="relative w-full sm:w-[220px]">
+            <select className="h-10 w-full appearance-none rounded-md border border-slate-700/60 bg-slate-950/40 pl-4 pr-10 text-[14px] text-slate-200 shadow-inner shadow-slate-950/20 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50">
+              <option>oral</option>
+              <option>@ogater</option>
+            </select>
+            <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none">
+              <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          
+          <div className="relative w-full sm:w-[260px]">
+            <div className="flex h-10 w-full items-center gap-2 rounded-md border border-slate-700/60 bg-slate-950/40 px-4 text-[14px] text-slate-200 shadow-inner shadow-slate-950/20">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-400" fill="none">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span>May 4 – May 10, 2026</span>
+            </div>
+          </div>
+
+          <div className="relative w-full sm:w-[240px]">
+            <select className="h-10 w-full appearance-none rounded-md border border-slate-700/60 bg-slate-950/40 pl-4 pr-10 text-[14px] text-slate-200 shadow-inner shadow-slate-950/20 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50">
+              <option>Local time (UTC+3)</option>
+              <option>UTC</option>
+            </select>
+            <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none">
+              <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+        
+        <button className="h-10 rounded-md bg-[#0ea5e9] px-6 text-[14px] font-medium text-white shadow-[0_0_20px_rgba(14,165,233,0.3)] transition hover:bg-[#0284c7]">
+          Export report
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {[
+          { label: "Online today", value: "2h 18m" },
+          { label: "Sessions", value: "12" },
+          { label: "Active window", value: "19:00–22:00" },
+          { label: "Data coverage", value: "92%" }
+        ].map((metric) => (
+          <div key={metric.label} className="rounded-md border border-slate-700/50 bg-slate-900/30 p-4">
+            <div className="text-[13px] text-slate-400">{metric.label}</div>
+            <div className="mt-1 text-[20px] font-medium text-white">{metric.value}</div>
+          </div>
+
+        ))}
+      </div>
+
+      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-5">
+        <h3 className="text-[14px] font-semibold text-white">Activity heatmap</h3>
+        <div className="mt-4 flex">
+          <div className="flex w-[40px] flex-col justify-between py-1 text-[11px] leading-none text-slate-400">
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span>Sat</span>
+            <span>Sun</span>
+          </div>
+          <div className="flex-1">
+            <div className="grid grid-cols-[repeat(24,1fr)] gap-[2px]">
+              {Array.from({ length: 7 * 24 }).map((_, i) => {
+                const hour = i % 24;
+                const isBlue = hour >= 14 && hour <= 21;
+                const intensity = isBlue ? [20, 40, 60, 80, 100, 80, 60, 40][hour - 14] : 0;
+                
+                return (
+                  <div 
+                    key={i} 
+                    className="aspect-square w-full rounded-[2px]" 
+                    style={{ 
+                      backgroundColor: intensity > 0 ? `rgba(14, 165, 233, ${intensity / 100})` : 'rgba(30, 41, 59, 0.4)' 
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <div className="mt-2 grid grid-cols-[repeat(24,1fr)] text-center text-[10px] text-slate-400">
+              {Array.from({ length: 24 }).map((_, i) => (
+                <div key={i}>{String(i).padStart(2, "0")}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-5">
+        <h3 className="text-[14px] font-semibold text-white">Session timeline</h3>
+        <div className="mt-4">
+          <div className="relative h-2 w-full rounded-full bg-slate-800/80">
+            <div className="absolute left-[15%] h-full w-[5%] rounded-full bg-[#0ea5e9]"></div>
+            <div className="absolute left-[30%] h-full w-[10%] rounded-full bg-[#0ea5e9]"></div>
+            <div className="absolute left-[55%] h-full w-[8%] rounded-full bg-[#0ea5e9]"></div>
+            <div className="absolute left-[75%] h-full w-[12%] rounded-full bg-[#0ea5e9]"></div>
+            <div className="absolute left-[95%] h-full w-[3%] rounded-full bg-[#0ea5e9]"></div>
+          </div>
+          <div className="mt-3 flex justify-between text-[11px] text-slate-400">
+            <span>00:00</span>
+            <span>04:00</span>
+            <span>08:00</span>
+            <span>12:00</span>
+            <span>16:00</span>
+            <span>20:00</span>
+            <span>24:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-md border border-slate-700/50 bg-slate-900/30 p-0">
+        <div className="p-5 pb-3">
+          <h3 className="text-[14px] font-semibold text-white">Recent sessions</h3>
+        </div>
+        <table className="w-full text-left text-[13px]">
+          <thead className="border-y border-slate-700/50 bg-slate-900/50 text-slate-400">
+            <tr>
+              <th className="px-5 py-3 font-medium">Date <span className="text-[10px]">▼</span></th>
+              <th className="px-5 py-3 font-medium">Online</th>
+              <th className="px-5 py-3 font-medium">Offline</th>
+              <th className="px-5 py-3 font-medium">Duration</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-700/50 text-slate-300">
+            {[
+              { date: "May 10, 2026", on: "19:03", off: "21:21", dur: "2h 18m" },
+              { date: "May 9, 2026", on: "18:42", off: "20:37", dur: "1h 55m" },
+              { date: "May 8, 2026", on: "20:11", off: "22:03", dur: "1h 52m" },
+              { date: "May 7, 2026", on: "19:27", off: "21:05", dur: "1h 38m" },
+              { date: "May 6, 2026", on: "18:56", off: "20:44", dur: "1h 48m" },
+            ].map((row, i) => (
+              <tr key={i}>
+                <td className="px-5 py-3">{row.date}</td>
+                <td className="px-5 py-3">{row.on}</td>
+                <td className="px-5 py-3">{row.off}</td>
+                <td className="px-5 py-3">{row.dur}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { token, user, logout } = useAuthStore((state) => ({
     token: state.token,
     user: state.user,
     logout: state.logout
   }));
+  const [activeTab, setActiveTab] = useState("Analytics");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [results, setResults] = useState<TrackedUser[]>([]);
@@ -390,7 +553,7 @@ export default function Dashboard() {
 
   return (
     <LoginGate>
-      <DashboardShell>
+      <DashboardShell activeTab={activeTab} onTabChange={setActiveTab}>
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-6 pt-4 text-slate-200 md:flex-row md:items-start md:justify-between lg:pt-8">
           <div className="max-w-[560px]">
@@ -436,7 +599,9 @@ export default function Dashboard() {
           )}
         </header>
 
-        <section className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.3)] backdrop-blur md:p-9">
+        {activeTab === "Tracked Users" && (
+          <>
+            <section className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.3)] backdrop-blur md:p-9">
           <div className="flex items-start gap-5">
             <UsersGlyph className="mt-1 h-9 w-9 text-blue-500" />
             <div>
@@ -613,6 +778,12 @@ export default function Dashboard() {
           <div className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 text-center text-sm text-slate-400">
             Loading activity data...
           </div>
+        )}
+          </>
+        )}
+
+        {activeTab === "Analytics" && (
+          <AnalyticsView />
         )}
       </div>
       </DashboardShell>
