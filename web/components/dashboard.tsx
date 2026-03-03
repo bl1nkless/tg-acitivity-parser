@@ -242,7 +242,7 @@ function AnalyticsView() {
           { label: "Active window", value: "19:00–22:00" },
           { label: "Data coverage", value: "92%" }
         ].map((metric) => (
-          <div key={metric.label} className="rounded-md border border-slate-700/50 bg-slate-900/30 p-4">
+          <div key={metric.label} className="rounded-md border border-slate-700/50 bg-slate-900/40 p-4">
             <div className="text-[13px] text-slate-400">{metric.label}</div>
             <div className="mt-1 text-[20px] font-medium text-white">{metric.value}</div>
           </div>
