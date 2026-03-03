@@ -333,10 +333,10 @@ function AnalyticsView() {
               { date: "May 6, 2026", on: "18:56", off: "20:44", dur: "1h 48m" },
             ].map((row, i) => (
               <tr key={i}>
-                <td className="px-5 py-3">{row.date}</td>
-                <td className="px-5 py-3">{row.on}</td>
-                <td className="px-5 py-3">{row.off}</td>
-                <td className="px-5 py-3">{row.dur}</td>
+                <td className="px-6 py-4">{row.date}</td>
+                <td className="px-6 py-4">{row.on}</td>
+                <td className="px-6 py-4">{row.off}</td>
+                <td className="px-6 py-4">{row.dur}</td>
               </tr>
             ))}
           </tbody>
