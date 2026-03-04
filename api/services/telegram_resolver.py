@@ -9,6 +9,8 @@ from pathlib import Path
 
 from telethon import TelegramClient
 from telethon.errors import RPCError
+from telethon.tl.types import Channel, Chat, User
+from telethon.utils import get_peer_id
 
 from common.config import ApiSettings
 
@@ -18,6 +20,15 @@ class ResolvedTelegramUser:
     tg_user_id: int
     username: str | None
     display_name: str | None
+
+
+@dataclass(frozen=True)
+class ResolvedTelegramChat:
+    telegram_chat_id: int
+    access_hash: int | None
+    username: str | None
+    title: str | None
+    chat_type: str
 
 
 def normalize_username(username: str) -> str:
@@ -76,4 +87,58 @@ async def resolve_username(settings: ApiSettings, username: str) -> ResolvedTele
         tg_user_id=tg_user_id,
         username=getattr(entity, "username", None) or normalized,
         display_name=_display_name(entity),
+    )
+
+
+def _chat_type(entity) -> str:
+    if isinstance(entity, Channel):
+        if getattr(entity, "megagroup", False):
+            return "supergroup"
+        if getattr(entity, "broadcast", False):
+            return "channel"
+        return "channel"
+    if isinstance(entity, Chat):
+        return "group"
+    if isinstance(entity, User):
+        return "user"
+    return "unknown"
+
+
+async def resolve_chat(settings: ApiSettings, chat_ref: str) -> ResolvedTelegramChat:
+    normalized = chat_ref.strip().lstrip("@")
+    if not normalized:
+        raise ValueError("Chat reference is required.")
+    if settings.tg_api_id is None or not settings.tg_api_hash:
+        raise RuntimeError("Telegram API credentials are not configured for chat lookup.")
+
+    lookup_session = _copy_session_for_lookup(settings.session_path)
+    client = TelegramClient(
+        session=lookup_session,
+        api_id=settings.tg_api_id,
+        api_hash=settings.tg_api_hash,
+    )
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            raise RuntimeError("Telegram session is not authorized. Run collector login first.")
+        entity = await client.get_entity(int(normalized) if normalized.lstrip("-").isdigit() else normalized)
+    except (RPCError, ValueError) as exc:
+        raise LookupError(f"Telegram chat {chat_ref!r} was not found or is not accessible.") from exc
+    finally:
+        with suppress(Exception):
+            await client.disconnect()
+        if lookup_session != settings.session_path:
+            with suppress(OSError):
+                os.remove(lookup_session)
+
+    telegram_chat_id = get_peer_id(entity)
+    if not isinstance(telegram_chat_id, int):
+        raise LookupError(f"Telegram chat {chat_ref!r} was not found or is not accessible.")
+
+    return ResolvedTelegramChat(
+        telegram_chat_id=telegram_chat_id,
+        access_hash=getattr(entity, "access_hash", None),
+        username=getattr(entity, "username", None),
+        title=getattr(entity, "title", None) or _display_name(entity),
+        chat_type=_chat_type(entity),
     )

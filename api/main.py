@@ -9,7 +9,7 @@ from common.db import get_session_factory
 
 from .auth.service import ensure_bootstrap_admin
 from .core.config import get_settings
-from .routers import aggregates, auth, export, sessions, tracked
+from .routers import aggregates, auth, chat_authors, export, sessions, tracked
 
 
 def create_app() -> FastAPI:
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(aggregates.router)
     app.include_router(export.router)
+    app.include_router(chat_authors.router)
 
     @app.on_event("startup")
     async def on_startup() -> None:
