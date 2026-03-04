@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import enum
+import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, JSON, String
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, JSON, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -40,6 +41,15 @@ class SessionClosedReason(str, enum.Enum):
     EXPIRY = "expiry"
     POLL = "poll"
     MANUAL = "manual"
+
+
+class ChatAuthorJobStatus(str, enum.Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    PAUSED_FLOOD_WAIT = "paused_flood_wait"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 def enum_for(enum_cls: enum.EnumMeta, name: str) -> Enum:
@@ -92,6 +102,118 @@ class TrackedUser(Base):
     online_sessions: Mapped[list["OnlineSession"]] = relationship(
         "OnlineSession", back_populates="user", cascade="all, delete-orphan"
     )
+
+
+class TelegramChat(Base):
+    __tablename__ = "telegram_chats"
+    __table_args__ = (
+        Index("idx_telegram_chats_username", "username"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    telegram_chat_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+    access_hash: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    username: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    chat_type: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    jobs: Mapped[list["TelegramChatAuthorJob"]] = relationship("TelegramChatAuthorJob", back_populates="chat")
+    active_authors: Mapped[list["TelegramChatActiveAuthor"]] = relationship("TelegramChatActiveAuthor", back_populates="chat")
+
+
+class TelegramUser(Base):
+    __tablename__ = "telegram_users"
+    __table_args__ = (
+        Index("idx_telegram_users_username", "username"),
+    )
+
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    access_hash: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    username: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    first_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    last_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    is_bot: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    active_author_rows: Mapped[list["TelegramChatActiveAuthor"]] = relationship("TelegramChatActiveAuthor", back_populates="user")
+
+
+class TelegramChatAuthorJob(Base):
+    __tablename__ = "telegram_chat_author_jobs"
+    __table_args__ = (
+        CheckConstraint("lookback_days >= 1", name="chk_chat_author_lookback_days_positive"),
+        Index("idx_chat_author_jobs_status", "status"),
+        Index("idx_chat_author_jobs_chat_time", "telegram_chat_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    telegram_chat_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("telegram_chats.telegram_chat_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    requested_by_account_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("account_user.id", ondelete="SET NULL"))
+    lookback_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[ChatAuthorJobStatus] = mapped_column(enum_for(ChatAuthorJobStatus, "chatauthorjobstatus"), nullable=False)
+    cursor_message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    cursor_message_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    scanned_messages_count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    unique_authors_count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    flood_wait_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    chat: Mapped[TelegramChat] = relationship("TelegramChat", back_populates="jobs")
+    active_authors: Mapped[list["TelegramChatActiveAuthor"]] = relationship("TelegramChatActiveAuthor", back_populates="source_job")
+
+
+class TelegramChatActiveAuthor(Base):
+    __tablename__ = "telegram_chat_active_authors"
+    __table_args__ = (
+        UniqueConstraint("telegram_chat_id", "telegram_user_id", "period_start", "period_end", name="uq_active_author_chat_user_period"),
+        Index("idx_active_authors_chat_period", "telegram_chat_id", "period_start", "period_end"),
+        Index("idx_active_authors_user", "telegram_user_id"),
+        Index("idx_active_authors_message_count", "message_count"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    telegram_chat_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("telegram_chats.telegram_chat_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    telegram_user_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("telegram_users.telegram_user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    message_count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    first_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source_job_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("telegram_chat_author_jobs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    chat: Mapped[TelegramChat] = relationship("TelegramChat", back_populates="active_authors")
+    user: Mapped[TelegramUser] = relationship("TelegramUser", back_populates="active_author_rows")
+    source_job: Mapped[TelegramChatAuthorJob] = relationship("TelegramChatAuthorJob", back_populates="active_authors")
 
 
 class StatusEvent(Base):

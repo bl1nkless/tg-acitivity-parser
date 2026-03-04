@@ -6,6 +6,8 @@ def test_api_settings_defaults():
     settings = load_api_settings()
     assert settings.database.url.startswith("postgresql")
     assert "http://localhost:3000" in settings.allow_origins
+    assert settings.chat_authors_enabled is True
+    assert settings.chat_authors_max_lookback_days == 30
 
 
 def test_collector_settings_defaults(monkeypatch):
@@ -15,3 +17,5 @@ def test_collector_settings_defaults(monkeypatch):
     settings = load_collector_settings()
     assert settings.tg_api_id == 123
     assert settings.session_path.endswith(".session")
+    assert settings.chat_authors_history_wait_seconds == 1.5
+    assert settings.chat_authors_max_messages_per_job == 100_000

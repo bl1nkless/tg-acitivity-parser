@@ -51,6 +51,14 @@ class ApiSettings(BaseAppSettings):
     tg_api_id: Optional[int] = Field(default=None, alias="TG_API_ID")
     tg_api_hash: Optional[str] = Field(default=None, alias="TG_API_HASH")
     session_path: str = Field(default="session_store/collector.session", alias="SESSION_PATH")
+    chat_authors_enabled: bool = Field(default=True, alias="CHAT_AUTHORS_ENABLED")
+    chat_authors_max_lookback_days: int = Field(default=30, alias="CHAT_AUTHORS_MAX_LOOKBACK_DAYS")
+    chat_authors_default_lookback_days: int = Field(default=30, alias="CHAT_AUTHORS_DEFAULT_LOOKBACK_DAYS")
+    chat_authors_max_messages_per_job: int = Field(default=100_000, alias="CHAT_AUTHORS_MAX_MESSAGES_PER_JOB")
+    chat_authors_history_wait_seconds: float = Field(default=1.5, alias="CHAT_AUTHORS_HISTORY_WAIT_SECONDS")
+    chat_authors_max_concurrent_jobs_global: int = Field(default=1, alias="CHAT_AUTHORS_MAX_CONCURRENT_JOBS_GLOBAL")
+    chat_authors_min_seconds_between_jobs: int = Field(default=60, alias="CHAT_AUTHORS_MIN_SECONDS_BETWEEN_JOBS")
+    chat_authors_auto_resume_flood_wait: bool = Field(default=True, alias="CHAT_AUTHORS_AUTO_RESUME_FLOOD_WAIT")
 
     @field_validator("allow_origins", mode="before")
     @classmethod
@@ -86,6 +94,14 @@ class CollectorSettings(BaseAppSettings):
     ttl_grace_seconds: int = Field(default=30, alias="TTL_GRACE_SECONDS")
     light_poll_interval_seconds: int = Field(default=30, alias="POLL_INTERVAL_SECONDS")
     burst_poll_window_seconds: int = Field(default=120, alias="BURST_WINDOW_SECONDS")
+    chat_authors_enabled: bool = Field(default=True, alias="CHAT_AUTHORS_ENABLED")
+    chat_authors_max_lookback_days: int = Field(default=30, alias="CHAT_AUTHORS_MAX_LOOKBACK_DAYS")
+    chat_authors_default_lookback_days: int = Field(default=30, alias="CHAT_AUTHORS_DEFAULT_LOOKBACK_DAYS")
+    chat_authors_max_messages_per_job: int = Field(default=100_000, alias="CHAT_AUTHORS_MAX_MESSAGES_PER_JOB")
+    chat_authors_history_wait_seconds: float = Field(default=1.5, alias="CHAT_AUTHORS_HISTORY_WAIT_SECONDS")
+    chat_authors_max_concurrent_jobs_global: int = Field(default=1, alias="CHAT_AUTHORS_MAX_CONCURRENT_JOBS_GLOBAL")
+    chat_authors_min_seconds_between_jobs: int = Field(default=60, alias="CHAT_AUTHORS_MIN_SECONDS_BETWEEN_JOBS")
+    chat_authors_auto_resume_flood_wait: bool = Field(default=True, alias="CHAT_AUTHORS_AUTO_RESUME_FLOOD_WAIT")
 
 
 @lru_cache(maxsize=1)
