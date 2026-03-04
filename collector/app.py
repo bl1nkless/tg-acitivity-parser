@@ -10,6 +10,7 @@ from telethon import TelegramClient, events
 from common.config import CollectorSettings, load_collector_settings
 from common.logging import configure_logging
 
+from .chat_authors import ChatAuthorJobWorker
 from .scheduler import CollectorScheduler
 from .status_tracker import StatusTracker
 
@@ -30,7 +31,8 @@ async def main() -> None:
     redis = Redis.from_url(settings.redis.url, decode_responses=True)
     tracker = StatusTracker(settings, redis)
     client = await _create_telegram_client(settings)
-    scheduler = CollectorScheduler(tracker, client)
+    chat_author_worker = ChatAuthorJobWorker(settings, redis, client)
+    scheduler = CollectorScheduler(tracker, client, chat_author_worker=chat_author_worker)
 
     @client.on(events.Raw)
     async def _(raw_update) -> None:
