@@ -67,6 +67,60 @@ export interface Heatmap {
   cells: HeatmapCell[];
 }
 
+export interface TelegramChat {
+  telegram_chat_id: number;
+  access_hash?: number | null;
+  username?: string | null;
+  title?: string | null;
+  chat_type: string;
+}
+
+export type ChatAuthorJobStatus =
+  | "queued"
+  | "running"
+  | "paused_flood_wait"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface ChatAuthorJob {
+  id: string;
+  telegram_chat_id: number;
+  lookback_days: number;
+  period_start: string;
+  period_end: string;
+  status: ChatAuthorJobStatus;
+  cursor_message_id?: number | null;
+  cursor_message_date?: string | null;
+  scanned_messages_count: number;
+  unique_authors_count: number;
+  flood_wait_until?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  updated_at: string;
+}
+
+export interface ChatActiveAuthor {
+  telegram_chat_id: number;
+  telegram_user_id: number;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  is_bot?: boolean | null;
+  message_count: number;
+  first_message_at: string;
+  last_message_at: string;
+}
+
+export interface ChatActiveAuthorsResponse extends Paginated<ChatActiveAuthor> {
+  period_start?: string | null;
+  period_end?: string | null;
+  latest_job?: ChatAuthorJob | null;
+}
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const mergedHeaders = new Headers(options.headers ?? {});
   if (!mergedHeaders.has("Content-Type")) {
@@ -191,4 +245,54 @@ export async function getRecentSessions(
   params.set("limit", String(limit));
   params.set("offset", "0");
   return await request<Paginated<Session>>(`/users/${userId}/sessions?${params.toString()}`, {}, token);
+}
+
+export async function resolveTelegramChat(token: string, chatRef: string): Promise<TelegramChat> {
+  return await request<TelegramChat>(
+    "/telegram/chats/resolve",
+    {
+      method: "POST",
+      body: JSON.stringify({ chat_ref: chatRef })
+    },
+    token
+  );
+}
+
+export async function createChatAuthorJob(
+  token: string,
+  telegramChatId: number,
+  lookbackDays: number
+): Promise<ChatAuthorJob> {
+  return await request<ChatAuthorJob>(
+    "/telegram/chat-author-jobs",
+    {
+      method: "POST",
+      body: JSON.stringify({ telegram_chat_id: telegramChatId, lookback_days: lookbackDays })
+    },
+    token
+  );
+}
+
+export async function getChatAuthorJob(token: string, jobId: string): Promise<ChatAuthorJob> {
+  return await request<ChatAuthorJob>(`/telegram/chat-author-jobs/${jobId}`, {}, token);
+}
+
+export async function getChatActiveAuthors(
+  token: string,
+  telegramChatId: number,
+  periodDays: number,
+  limit = 100,
+  offset = 0,
+  search?: string
+): Promise<ChatActiveAuthorsResponse> {
+  const params = new URLSearchParams();
+  params.set("period_days", String(periodDays));
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
+  if (search) params.set("search", search);
+  return await request<ChatActiveAuthorsResponse>(
+    `/telegram/chats/${telegramChatId}/active-authors?${params.toString()}`,
+    {},
+    token
+  );
 }

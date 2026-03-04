@@ -4,24 +4,35 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef
 import { format, differenceInSeconds } from "date-fns";
 import {
   API_BASE_URL,
+  createChatAuthorJob,
   createTrackedUser,
+  getChatActiveAuthors,
+  getChatAuthorJob,
+  getCurrentUser,
   getHeatmapData,
   getHourlyData,
   getRecentSessions,
   getTrackedUser,
+  login,
+  resolveTelegramChat,
   searchTrackedUsers,
+  type ChatActiveAuthor,
+  type ChatAuthorJob,
   type Heatmap,
   type Session,
-  type TrackedUser
+  type TelegramChat,
+  type TrackedUser,
+  type UserInfo
 } from "@/lib/api";
-import LoginGate from "./login-gate";
 import SearchResults from "./search-results";
 import UserSummary from "./user-summary";
 import HeatmapChart from "./charts/HeatmapChart";
 import HourlyDistributionChart from "./charts/HourlyDistributionChart";
 import TrendLineChart from "./charts/TrendLineChart";
 import SessionsTable from "./sessions-table";
-import { useAuthStore } from "@/store/use-auth";
+
+const AUTO_LOGIN_EMAIL = process.env.NEXT_PUBLIC_AUTO_LOGIN_EMAIL ?? "admin@example.com";
+const AUTO_LOGIN_PASSWORD = process.env.NEXT_PUBLIC_AUTO_LOGIN_PASSWORD ?? "ChangeMe123!";
 
 function SidebarIcon({ children }: { children: ReactNode }) {
   return (
@@ -69,6 +80,16 @@ function DashboardShell({ children, activeTab, onTabChange }: { children: ReactN
         <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
           <path d="M6 18V13M12 18V6M18 18v-9" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
           <path d="M6 20h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      )
+    },
+    {
+      label: "Chat Authors",
+      active: activeTab === "Chat Authors",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
+          <path d="M7 8.5h10M7 12h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+          <path d="M5.5 4.5h13A2.5 2.5 0 0 1 21 7v7a2.5 2.5 0 0 1-2.5 2.5H12L7 20v-3.5H5.5A2.5 2.5 0 0 1 3 14V7a2.5 2.5 0 0 1 2.5-2.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
         </svg>
       )
     },
@@ -403,12 +424,243 @@ function AnalyticsView({
   );
 }
 
+function ChatAuthorsView({ token, isAdmin }: { token: string | null; isAdmin: boolean }) {
+  const [chatRef, setChatRef] = useState("");
+  const [periodDays, setPeriodDays] = useState(7);
+  const [resolvedChat, setResolvedChat] = useState<TelegramChat | null>(null);
+  const [job, setJob] = useState<ChatAuthorJob | null>(null);
+  const [authors, setAuthors] = useState<ChatActiveAuthor[]>([]);
+  const [totalAuthors, setTotalAuthors] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadAuthors = useCallback(
+    async (chat: TelegramChat, days: number) => {
+      if (!token) return;
+      const response = await getChatActiveAuthors(token, chat.telegram_chat_id, days, 100);
+      setAuthors(response.items);
+      setTotalAuthors(response.total);
+      if (response.latest_job) {
+        setJob(response.latest_job);
+      }
+    },
+    [token]
+  );
+
+  useEffect(() => {
+    if (!token || !resolvedChat || !job) return;
+    if (!["queued", "running", "paused_flood_wait"].includes(job.status)) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const fresh = await getChatAuthorJob(token, job.id);
+        setJob(fresh);
+        if (fresh.status === "completed") {
+          await loadAuthors(resolvedChat, fresh.lookback_days);
+        }
+      } catch (pollError) {
+        console.error(pollError);
+      }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [job, loadAuthors, resolvedChat, token]);
+
+  const handleResolve = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const chat = await resolveTelegramChat(token, chatRef.trim());
+      setResolvedChat(chat);
+      setAuthors([]);
+      setTotalAuthors(0);
+      setJob(null);
+      await loadAuthors(chat, periodDays);
+    } catch (resolveError) {
+      setError(resolveError instanceof Error ? resolveError.message : "Failed to resolve Telegram chat.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStart = async () => {
+    if (!token || !resolvedChat) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const started = await createChatAuthorJob(token, resolvedChat.telegram_chat_id, periodDays);
+      setJob(started);
+      setAuthors([]);
+      setTotalAuthors(0);
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : "Failed to start chat author scan.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportAuthors = async (format: "csv" | "json") => {
+    if (!token || !resolvedChat) return;
+    const response = await fetch(
+      `${API_BASE_URL}/telegram/chats/${resolvedChat.telegram_chat_id}/active-authors.${format}?period_days=${periodDays}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!response.ok) {
+      setError("Failed to export chat authors.");
+      return;
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `chat_authors_${resolvedChat.telegram_chat_id}.${format}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const jobStatusText = job
+    ? `${job.status.replaceAll("_", " ")} · ${job.scanned_messages_count} messages · ${job.unique_authors_count} authors`
+    : "No scan started yet.";
+
+  return (
+    <section className="rounded-lg border border-slate-700/60 bg-slate-900/45 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.3)] backdrop-blur md:p-9">
+      <div className="flex flex-col gap-3">
+        <h2 className="text-[26px] font-semibold tracking-normal text-white">Chat Authors</h2>
+        <p className="max-w-[720px] text-[16px] leading-[1.45] text-slate-300/80">
+          Resolve a Telegram chat, scan recent message history, and collect only author metadata and activity counts.
+        </p>
+        <p className="rounded-md border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          The collector does not auto-join chats and does not store message text or media. It can only read chats visible
+          to the authorized Telegram session.
+        </p>
+      </div>
+
+      <form className="mt-7 grid gap-4 rounded-lg border border-slate-700/70 bg-slate-950/35 p-5 lg:grid-cols-[minmax(0,1fr)_160px_170px_170px]" onSubmit={handleResolve}>
+        <input
+          type="text"
+          value={chatRef}
+          onChange={(event) => setChatRef(event.target.value)}
+          placeholder="Chat username or ID"
+          className="h-[52px] rounded-md border border-slate-700 bg-slate-900/70 px-5 text-[16px] text-slate-100 placeholder:text-slate-400/90 shadow-inner shadow-slate-950/30 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+        />
+        <select
+          value={periodDays}
+          onChange={(event) => setPeriodDays(Number(event.target.value))}
+          className="h-[52px] rounded-md border border-slate-700 bg-slate-900/70 px-4 text-[16px] text-slate-100 shadow-inner shadow-slate-950/30 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+        >
+          {[1, 3, 7, 14, 30].map((days) => (
+            <option key={days} value={days}>
+              {days}d
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          disabled={!token || loading || !chatRef.trim()}
+          className="h-[52px] rounded-md border border-sky-400/45 bg-sky-500/10 px-5 text-[16px] font-semibold text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800/50 disabled:text-slate-500"
+        >
+          {loading ? "Working..." : "Resolve"}
+        </button>
+        <button
+          type="button"
+          onClick={handleStart}
+          disabled={!isAdmin || !resolvedChat || loading}
+          className="flex h-[52px] items-center justify-center gap-2 rounded-md bg-blue-600 px-5 text-[16px] font-semibold text-white shadow-[0_0_28px_rgba(37,99,235,0.35)] transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M8 5v14l11-7L8 5Z" fill="currentColor" />
+          </svg>
+          Start
+        </button>
+      </form>
+
+      {error && <div className="mt-5 rounded-lg border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-300">{error}</div>}
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-lg border border-slate-700/60 bg-slate-950/30 p-5">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Resolved chat</p>
+          {resolvedChat ? (
+            <div className="mt-3 space-y-1 text-slate-200">
+              <p className="text-lg font-semibold text-white">{resolvedChat.title || resolvedChat.username || resolvedChat.telegram_chat_id}</p>
+              <p className="text-sm text-slate-400">@{resolvedChat.username || "no_username"} · {resolvedChat.chat_type} · {resolvedChat.telegram_chat_id}</p>
+            </div>
+          ) : (
+            <p className="mt-3 text-slate-400">Resolve a chat to start collecting active authors.</p>
+          )}
+        </div>
+        <div className="rounded-lg border border-slate-700/60 bg-slate-950/30 p-5">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Scan status</p>
+          <p className="mt-3 text-lg font-semibold capitalize text-white">{jobStatusText}</p>
+          {job?.flood_wait_until && (
+            <p className="mt-2 text-sm text-amber-200">Paused until {format(new Date(job.flood_wait_until), "yyyy-MM-dd HH:mm:ss")}</p>
+          )}
+          {job?.error_message && <p className="mt-2 text-sm text-rose-300">{job.error_message}</p>}
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-slate-700/60 bg-slate-950/30">
+        <div className="flex flex-col gap-3 border-b border-slate-700/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Active authors</h3>
+            <p className="text-sm text-slate-400">{totalAuthors} authors in the latest completed {periodDays}d scan.</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="rounded-md border border-sky-400/45 bg-sky-500/10 px-4 py-2 text-sm text-sky-100 transition hover:bg-sky-500/20" onClick={() => exportAuthors("csv")} disabled={!resolvedChat}>
+              Export CSV
+            </button>
+            <button className="rounded-md border border-slate-700 bg-slate-800/70 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700" onClick={() => exportAuthors("json")} disabled={!resolvedChat}>
+              Export JSON
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-5 py-3">User</th>
+                <th className="px-5 py-3">Telegram ID</th>
+                <th className="px-5 py-3">Messages</th>
+                <th className="px-5 py-3">First message</th>
+                <th className="px-5 py-3">Last message</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 text-slate-200">
+              {authors.map((author) => (
+                <tr key={author.telegram_user_id}>
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-white">
+                      {author.username ? `@${author.username}` : [author.first_name, author.last_name].filter(Boolean).join(" ") || "Unknown"}
+                    </div>
+                    <div className="text-xs text-slate-500">{author.is_bot ? "bot" : "user"}</div>
+                  </td>
+                  <td className="px-5 py-4 font-mono text-slate-300">{author.telegram_user_id}</td>
+                  <td className="px-5 py-4">{author.message_count}</td>
+                  <td className="px-5 py-4">{format(new Date(author.first_message_at), "yyyy-MM-dd HH:mm:ss")}</td>
+                  <td className="px-5 py-4">{format(new Date(author.last_message_at), "yyyy-MM-dd HH:mm:ss")}</td>
+                </tr>
+              ))}
+              {!authors.length && (
+                <tr>
+                  <td className="px-5 py-12 text-center text-slate-500" colSpan={5}>
+                    No completed author scan results yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Dashboard() {
-  const { token, user, logout } = useAuthStore((state) => ({
-    token: state.token,
-    user: state.user,
-    logout: state.logout
-  }));
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Analytics");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -428,6 +680,34 @@ export default function Dashboard() {
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const latestRequestRef = useRef<number>(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAuthLoading(true);
+    setAuthError(null);
+    login(AUTO_LOGIN_EMAIL, AUTO_LOGIN_PASSWORD)
+      .then(async (tokenResponse) => {
+        const accessToken = tokenResponse.access_token;
+        const currentUser = await getCurrentUser(accessToken);
+        if (!cancelled) {
+          setToken(accessToken);
+          setUser(currentUser);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAuthError(error instanceof Error ? error.message : "Unable to initialize dashboard access.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -609,8 +889,7 @@ export default function Dashboard() {
   const summaryHourly = useMemo(() => state.hourly, [state.hourly]);
 
   return (
-    <LoginGate>
-      <DashboardShell activeTab={activeTab} onTabChange={setActiveTab}>
+    <DashboardShell activeTab={activeTab} onTabChange={setActiveTab}>
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-6 pt-4 text-slate-200 md:flex-row md:items-start md:justify-between lg:pt-8">
           <div className="max-w-[560px]">
@@ -621,37 +900,15 @@ export default function Dashboard() {
               Inspect online/offline sessions, consent metadata, aggregated heatmaps, and export evidence.
             </p>
           </div>
-          {user && (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex h-[78px] items-center gap-4 rounded-lg border border-slate-700/70 bg-slate-900/70 px-5 pr-7 shadow-[0_18px_55px_rgba(2,8,23,0.22)] backdrop-blur">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-700 shadow-[0_0_28px_rgba(37,99,235,0.45)]">
-                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
-                    <path
-                      d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5.2 20a6.8 6.8 0 0 1 13.6 0"
-                      fill="white"
-                    />
-                  </svg>
-                </span>
-                <span className="min-w-0">
-                  <span className="block max-w-[230px] truncate text-[17px] font-medium leading-6 text-white">
-                    {user.email}
-                  </span>
-                  <span className="block text-sm text-slate-400">{user.role}</span>
-                </span>
-                <svg viewBox="0 0 24 24" className="h-5 w-5 text-slate-400" fill="none" aria-hidden="true">
-                  <path d="m7 9 5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <button
-                className="flex h-[78px] items-center justify-center gap-3 rounded-lg border border-slate-700/70 bg-slate-900/70 px-7 text-[16px] font-semibold text-white shadow-[0_18px_55px_rgba(2,8,23,0.22)] transition hover:border-sky-400/50 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-                onClick={logout}
-              >
-                <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-300" fill="none" aria-hidden="true">
-                  <path d="M14 8V6.5A2.5 2.5 0 0 0 11.5 4h-5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20h5a2.5 2.5 0 0 0 2.5-2.5V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <path d="M10 12h9m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Sign out
-              </button>
+          {(authLoading || authError) && (
+            <div
+              className={`rounded-lg border px-5 py-3 text-sm ${
+                authError
+                  ? "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                  : "border-slate-700/60 bg-slate-900/55 text-slate-300"
+              }`}
+            >
+              {authError || "Connecting to dashboard data..."}
             </div>
           )}
         </header>
@@ -842,8 +1099,11 @@ export default function Dashboard() {
         {activeTab === "Analytics" && (
           <AnalyticsView state={state} selectedUser={selectedUser} now={now} handleExport={handleExport} />
         )}
+
+        {activeTab === "Chat Authors" && (
+          <ChatAuthorsView token={token} isAdmin={user?.role === "admin"} />
+        )}
       </div>
       </DashboardShell>
-    </LoginGate>
   );
 }
